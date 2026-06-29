@@ -39,6 +39,7 @@ fn parse(text: &str) -> Result<Manifest> {
     let mut caps = String::new();
     let mut depends = String::new();
     let mut arch = String::from("x86_64");
+    let mut class = String::new();
 
     for line in text.lines() {
         let line = line.trim_end();
@@ -55,12 +56,19 @@ fn parse(text: &str) -> Result<Manifest> {
             "caps" => caps = v.to_string(),
             "depends" => depends = v.to_string(),
             "arch" => arch = v.to_string(),
+            "class" => class = v.to_string(),
             _ => {}
         }
     }
 
-    if id.is_empty() || name.is_empty() || version.is_empty() || exec.is_empty() {
-        bail!("manifest missing a required field (id/name/version/exec)");
+    if id.is_empty() || name.is_empty() || version.is_empty() {
+        bail!("manifest missing a required field (id/name/version)");
+    }
+    // exec is required only for app packages. A class=system package (the
+    // desktop stack) installs a whole tree, not a single launcher, so it has
+    // no exec — mirrors herald's manifest parser.
+    if class != "system" && exec.is_empty() {
+        bail!("manifest missing exec (required unless class=system)");
     }
     if id.contains('/') || exec.contains('/') || arch.contains('/') {
         bail!("manifest id/exec/arch must not contain '/'");
